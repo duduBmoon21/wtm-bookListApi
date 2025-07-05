@@ -34,7 +34,15 @@ const updateBook = (id, title, description) => {
   books[bookIndex] = updatedBook;
   return updatedBook;
 };
+const getBookById = (id) => {
+  const bookId = Number(id);
+  
+  if (isNaN(bookId)) {
+    throw new Error('Invalid book ID');
+  }
 
+  return books.find(book => book.id === bookId) || null;
+};
 const deleteBook = (id) => {
   const initialLength = books.length;
   books = books.filter(book => book.id !== Number(id));
@@ -48,5 +56,6 @@ module.exports = {
   createBook,
   getAllBooks,
   updateBook,
+  getBookById,
   deleteBook
 };

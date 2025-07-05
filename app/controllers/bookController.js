@@ -1,4 +1,4 @@
-const bookService = require('../services/bookService');
+const bookService = require("../services/bookService");
 
 const createBook = async (req, res, next) => {
   try {
@@ -14,6 +14,36 @@ const getAllBooks = async (req, res, next) => {
   try {
     const books = await bookService.getAllBooks();
     res.status(200).json(books);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getBookById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID format",
+      });
+    }
+
+    const book = await bookService.getBookById(id);
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: `Book with ID ${id} not found`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: book,
+    });
   } catch (error) {
     next(error);
   }
@@ -44,5 +74,6 @@ module.exports = {
   createBook,
   getAllBooks,
   updateBook,
-  deleteBook
+  getBookById,
+  deleteBook,
 };

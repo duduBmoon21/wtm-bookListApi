@@ -81,7 +81,7 @@ npm install
 3. **Run the Server**
 
 ```bash
-npm start
+node app/server.js
 ```
 
 The server will run on `http://localhost:3000` by default.
@@ -122,6 +122,15 @@ GET /api/books/1
 ### GET all books
 
 ![GET Example](https://raw.githubusercontent.com/duduBmoon21/wtm-bookListApi/main/static/GET.png)
+
+### create new book
+![POST Example](https://raw.githubusercontent.com/duduBmoon21/wtm-bookListApi/main/static/POST.png)
+
+### update book
+![PUT Example](https://raw.githubusercontent.com/duduBmoon21/wtm-bookListApi/main/static/PUT.png)
+
+### Get Book by ID
+![GETbyID Example](https://raw.githubusercontent.com/duduBmoon21/wtm-bookListApi/main/static/GETbyId.png)
 
 ---
 
