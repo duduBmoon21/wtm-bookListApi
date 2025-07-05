@@ -97,9 +97,8 @@ POST /api/books
 Content-Type: application/json
 
 {
-  "title": "Atomic Habits",
-  "author": "James Clear",
-  "year": 2018
+  "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+  "description": "Best practices for writing readable and maintainable code"
 }
 ```
 
