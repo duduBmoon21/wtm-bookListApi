@@ -17,22 +17,24 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({ filename: "logs/error.log", level: "error" }),
-    new winston.transports.File({ filename: "logs/combined.log" })
-  ]
+    new winston.transports.File({ filename: "logs/combined.log" }),
+  ],
 });
 
 const app = express();
 
 // Security middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"]
-    }
-  }
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  })
+);
 app.use(compression());
 
 // Rate limiting
@@ -41,23 +43,25 @@ const limiter = rateLimit({
   max: 100,
   message: "Too many requests, please try again later",
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
 });
 
 app.use(limiter);
 
 // CORS configuration
-app.use(cors({
-  origin: process.env.PUBLIC_URL
-    ? [
-        process.env.PUBLIC_URL,
-        "https://wtm-booklistapi-production.up.railway.app"
-      ]
-    : "http://localhost:3000",
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.PUBLIC_URL
+      ? [
+          process.env.PUBLIC_URL,
+          "https://wtm-booklistapi-production.up.railway.app",
+        ]
+      : "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+    credentials: true,
+  })
+);
 
 // Body parsing
 app.use(bodyParser.json({ limit: "10kb" }));
@@ -79,7 +83,7 @@ app.get("/", (req, res) => {
     version: process.env.npm_package_version,
     environment: process.env.NODE_ENV,
     uptime: process.uptime(),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -93,21 +97,27 @@ app.use((req, res) => {
   res.status(404).json({
     error: "NOT_FOUND",
     message: `Route ${req.method} ${req.path} not found`,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
   logger.error(`Error: ${err.stack}`);
-  
+
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     error: err.name || "INTERNAL_ERROR",
     message: err.message || "Internal server error",
     ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
+
+app.get("/test", (req, res) => {
+  console.log("GET /test hit");
+  res.send("API is working!");
+});
+
 
 module.exports = app;
