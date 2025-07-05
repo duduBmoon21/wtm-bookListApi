@@ -7,7 +7,8 @@ const rateLimit = require("express-rate-limit");
 const winston = require("winston");
 const bookRoutes = require("./routes/bookRoutes");
 
-// Configure logger
+const app = express();
+
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === "production" ? "info" : "debug",
   format: winston.format.combine(
@@ -21,9 +22,6 @@ const logger = winston.createLogger({
   ],
 });
 
-const app = express();
-
-// Security middleware
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -35,9 +33,9 @@ app.use(
     },
   })
 );
+
 app.use(compression());
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -48,7 +46,6 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// CORS configuration
 app.use(
   cors({
     origin: process.env.PUBLIC_URL
@@ -63,20 +60,22 @@ app.use(
   })
 );
 
-// Body parsing
 app.use(bodyParser.json({ limit: "10kb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10kb" }));
 
-// Request logging
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`);
   next();
 });
 
-// API routes
 app.use("/api/books", bookRoutes);
 
-// Health check endpoint
+
+app.get("/test", (req, res) => {
+  console.log("GET /test hit");
+  res.send("API is working!");
+});
+
 app.get("/", (req, res) => {
   res.status(200).json({
     status: "healthy",
@@ -87,11 +86,11 @@ app.get("/", (req, res) => {
   });
 });
 
+
 app.get("/git-repo", (req, res) => {
   res.redirect("https://github.com/duduBmoon21/wtm-bookListApi.git");
 });
 
-// 404 handler
 app.use((req, res) => {
   logger.warn(`404: ${req.method} ${req.path}`);
   res.status(404).json({
@@ -101,10 +100,9 @@ app.use((req, res) => {
   });
 });
 
-// Error handler
+
 app.use((err, req, res, next) => {
   logger.error(`Error: ${err.stack}`);
-
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     error: err.name || "INTERNAL_ERROR",
@@ -113,11 +111,5 @@ app.use((err, req, res, next) => {
     timestamp: new Date().toISOString(),
   });
 });
-
-app.get("/test", (req, res) => {
-  console.log("GET /test hit");
-  res.send("API is working!");
-});
-
 
 module.exports = app;
