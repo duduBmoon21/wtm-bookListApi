@@ -4,38 +4,70 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
+const winston = require("winston");
 const bookRoutes = require("./routes/bookRoutes");
+
+// Configure logger
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === "production" ? "info" : "debug",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: "logs/error.log", level: "error" }),
+    new winston.transports.File({ filename: "logs/combined.log" })
+  ]
+});
 
 const app = express();
 
-app.use(helmet());
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"]
+    }
+  }
+}));
 app.use(compression());
 
+// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
+  message: "Too many requests, please try again later",
   standardHeaders: true,
-  legacyHeaders: false,
+  legacyHeaders: false
 });
 
 app.use(limiter);
 
-app.use(
-  cors({
-    origin: process.env.PUBLIC_URL
-      ? [
-          process.env.PUBLIC_URL,
-          "https://wtm-booklistapi-production.up.railway.app",
-        ]
-      : "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+// CORS configuration
+app.use(cors({
+  origin: process.env.PUBLIC_URL
+    ? [
+        process.env.PUBLIC_URL,
+        "https://wtm-booklistapi-production.up.railway.app"
+      ]
+    : "http://localhost:3000",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Request-ID"],
+  credentials: true
+}));
 
 // Body parsing
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: "10kb" }));
+app.use(bodyParser.urlencoded({ extended: true, limit: "10kb" }));
+
+// Request logging
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`);
+  next();
+});
 
 // API routes
 app.use("/api/books", bookRoutes);
@@ -43,39 +75,38 @@ app.use("/api/books", bookRoutes);
 // Health check endpoint
 app.get("/", (req, res) => {
   res.status(200).json({
-    message: "Book List API is running",
     status: "healthy",
-    environment: process.env.NODE_ENV || "development",
-    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version,
+    environment: process.env.NODE_ENV,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
   });
 });
 
-// API documentation redirect
-app.get("/docs", (req, res) => {
-  res.redirect("https://documenter.getpostman.com/view/your-documentation-id");
+app.get("/git-repo", (req, res) => {
+  res.redirect("https://github.com/duduBmoon21/wtm-bookListApi.git");
 });
 
 // 404 handler
 app.use((req, res) => {
+  logger.warn(`404: ${req.method} ${req.path}`);
   res.status(404).json({
-    success: false,
     error: "NOT_FOUND",
     message: `Route ${req.method} ${req.path} not found`,
-    timestamp: new Date().toISOString(),
+    timestamp: new Date().toISOString()
   });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(`[${new Date().toISOString()}] Error:`, err.stack);
-
+  logger.error(`Error: ${err.stack}`);
+  
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
-    success: false,
     error: err.name || "INTERNAL_ERROR",
     message: err.message || "Internal server error",
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
-    timestamp: new Date().toISOString(),
+    ...(process.env.NODE_ENV !== "production" && { stack: err.stack }),
+    timestamp: new Date().toISOString()
   });
 });
 
